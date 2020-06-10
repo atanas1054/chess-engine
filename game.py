@@ -11,6 +11,9 @@ from evaluation import *
 from search import *
 import time
 
+
+
+
 global board
 svg_to_load = "move.svg"
 
@@ -27,7 +30,11 @@ def computer_move():
             #print(entry.move, entry.weight, entry.learn)
             possible_moves.append(entry.move)
 
+
     # play book move
+
+    # play book move if possible
+
     if len(possible_moves) > 0:
         ind = random.randint(0, len(possible_moves) - 1)
         move = possible_moves[ind]
@@ -35,13 +42,20 @@ def computer_move():
         svg = chess.svg.board(board=board)
         update_svg(svg)
 
-    #minmax search
+    # otherwise search the best move
     else:
         start_time = time.time()
-        bestval, bestmove = search(board, -9999999, 9999999, depth=4, ply=0)
+        depth_ = 7
+        # iterative deepening
+        for d in range(1, depth_+1):
+            bestval, pv_moves = search(board, -9999999, 9999999, depth=d, ply=0)
+            print(pv_moves)
         print("--- %s seconds ---" % (time.time() - start_time))
-        board.push(bestmove[0])
-        print(bestval)
+        #print(pv.PVlist)
+        #print(len(flatten(pv.PVlist)))
+        board.push(pv_moves[0])
+        #print(bestval)
+
         svg = chess.svg.board(board=board)
         update_svg(svg)
     if (board.is_game_over()):
@@ -51,9 +65,6 @@ def make_move(move):
     move = chess.Move.from_uci(move)
     if (move in board.legal_moves):
         board.push(move)  # Make the move
-
-        print(moving_piece)
-        print(attacked_piece)
         svg = chess.svg.board(board=board)
         update_svg(svg)
     else:
@@ -100,10 +111,15 @@ class App(QMainWindow):
         self.button_computer = QPushButton('Computer Move', self)
         self.button_computer.move(220, 80)
 
+        self.button_fen= QPushButton('Parse FEN', self)
+        self.button_fen.move(320, 80)
+
         # connect button to function on_click
         self.button_move.clicked.connect(self.on_click_move)
         self.button_undo.clicked.connect(self.on_click_undo)
         self.button_computer.clicked.connect(self.on_click_computer)
+        self.button_fen.clicked.connect(self.on_click_fen)
+
         self.show()
 
     @pyqtSlot()
@@ -113,6 +129,16 @@ class App(QMainWindow):
         self.viewer.load(svg_to_load)
         self.viewer.show()
         self.textbox.setText("")
+
+    def on_click_fen(self):
+        fen = self.textbox.text()
+        board.set_fen(fen)
+        svg = chess.svg.board(board=board)
+        update_svg(svg)
+        self.viewer.load(svg_to_load)
+        self.viewer.show()
+        self.textbox.setText("")
+
 
     def on_click_computer(self):
         computer_move()

@@ -1,5 +1,9 @@
 import chess
 from evaluation import *
+from tt import hash_entry
+from sys import getsizeof
+t_table = {}
+
 
 def MVV_LVA(board: chess.Board, m: chess.Move):
 
@@ -42,7 +46,7 @@ def negamax(board, depth, ply=0, MAX_PLY = 128):
             best_value = search_value
             pv = [move] + child_pv
 
-    return best_value, pv
+    return alpha, pv
 
 #minimax
 # def minimax(board, depth, maximizingPlayer):
@@ -67,14 +71,27 @@ def negamax(board, depth, ply=0, MAX_PLY = 128):
 
 def search(board, alpha, beta, depth, ply=0):
 
+    alphaOrig = alpha
+    zobrist_hash = chess.polyglot.zobrist_hash(board)
+
+    if zobrist_hash in t_table and t_table[zobrist_hash].depth >= depth:
+        if t_table[zobrist_hash].type == "EXACT":
+            return t_table[zobrist_hash].score, t_table[zobrist_hash].pv
+        elif t_table[zobrist_hash].type == "LOWER":
+            alpha = max(alpha, t_table[zobrist_hash].score)
+        elif t_table[zobrist_hash].type == "UPPER":
+            beta = min(beta, t_table[zobrist_hash].score)
+        if (alpha >= beta):
+            return t_table[zobrist_hash].score, t_table[zobrist_hash].pv
+
+
     if depth <= 0:
         # This is a leaf node. So use plain evaluation or quiescence search.
         return evaluate_board(board), []
 
-
     if board.is_checkmate():
         # Board is in checkmate, return a distance from mate score.
-        return -100000 + ply, []
+        return -10000 + (ply-1), []
 
     if board.is_fivefold_repetition() or board.is_stalemate() or board.is_seventyfive_moves() or board.is_insufficient_material():
         return 0, []
@@ -85,9 +102,9 @@ def search(board, alpha, beta, depth, ply=0):
 
     best_score = -9999999
     pv = []
+
     for move in legal_moves:
         board.push(move)
-
         # The bounds are inverted and negated due to Negamax.
         score, child_pv = search(board, -beta, -alpha, depth - 1, ply + 1)
         # The return value is negated due to Negamax.
@@ -110,6 +127,16 @@ def search(board, alpha, beta, depth, ply=0):
             #return beta, []
             break
 
+    if (best_score <= alphaOrig):
+        type_ = "UPPER"
+    elif (best_score >= beta):
+         type_ = "LOWER"
+    else:
+        type_ = "EXACT"
+
+    h_entry = hash_entry(score = best_score, depth=depth, type=type_, pv=pv)
+    t_table[chess.polyglot.zobrist_hash(board)] = h_entry
+
     # If alpha was raised (and did not cause a beta-cutoff), then the node
     # is considered a PV-node. Otherwise it is an ALL-node.
-    return best_score, pv
+    return alpha, pv
