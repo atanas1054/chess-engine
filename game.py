@@ -45,11 +45,11 @@ def computer_move():
     # otherwise search the best move
     else:
         start_time = time.time()
-        depth_ = 7
+        max_depth = 5
         # iterative deepening
-        for d in range(1, depth_+1):
-            bestval, pv_moves = search(board, -9999999, 9999999, depth=d, ply=0)
-            print(pv_moves)
+        #for d in range(1, depth_+1):
+        bestval, pv_moves = search(board, -9999999, 9999999, depth=max_depth, ply=0, max_depth=max_depth, null_move=False)
+        print(pv_moves)
         print("--- %s seconds ---" % (time.time() - start_time))
         #print(pv.PVlist)
         #print(len(flatten(pv.PVlist)))

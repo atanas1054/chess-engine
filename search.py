@@ -69,7 +69,7 @@ def negamax(board, depth, ply=0, MAX_PLY = 128):
 
 #alpha-beta negamax
 
-def search(board, alpha, beta, depth, ply=0):
+def search(board, alpha, beta, depth, ply, max_depth, null_move):
 
     alphaOrig = alpha
     zobrist_hash = chess.polyglot.zobrist_hash(board)
@@ -84,6 +84,7 @@ def search(board, alpha, beta, depth, ply=0):
         if (alpha >= beta):
             return t_table[zobrist_hash].score, t_table[zobrist_hash].pv
 
+    end_of_tree = depth == max_depth
 
     if depth <= 0:
         # This is a leaf node. So use plain evaluation or quiescence search.
@@ -103,10 +104,20 @@ def search(board, alpha, beta, depth, ply=0):
     best_score = -9999999
     pv = []
 
+    ### NULL MOVE ###
+    if not board.is_check() and depth >= 3 and not end_of_tree and not null_move:
+        board.push(chess.Move.null())
+        nm_result, _ = search(board, -beta, -beta + 1, depth - 3, ply + 1,  max_depth, True)
+        board.pop()
+
+        if -nm_result >= beta:
+            return -nm_result, []
+
+
     for move in legal_moves:
         board.push(move)
         # The bounds are inverted and negated due to Negamax.
-        score, child_pv = search(board, -beta, -alpha, depth - 1, ply + 1)
+        score, child_pv = search(board, -beta, -alpha, depth - 1, ply + 1, max_depth, False)
         # The return value is negated due to Negamax.
         score = -score
         board.pop()
